@@ -12,13 +12,14 @@ import aiohttp
 import spotify
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import APIC, ID3, ID3NoHeaderError, error
-from mutagen.mp3 import MP3
+from mutagen.mp3 import MP3, HeaderNotFoundError
 
 SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID", None)
 SPOTIFY_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET", None)
 if SPOTIFY_SECRET is None:
     raise RuntimeError("Environment variables not set")
-FILE_PATH = "C:\\Users\\ximon\\Downloads\\Music\\Starred"
+FILE_PATH = os.environ.get("FILE_PATH",
+                           "C:\\Users\\ximon\\Downloads\\Music\\Starred")
 # Get all files from music folder
 with os.scandir(FILE_PATH) as music_files:
     music_files: List[DirEntry] = (
@@ -29,7 +30,12 @@ with os.scandir(FILE_PATH) as music_files:
 
 
 def cleanup_name(item) -> str:
-    return re.sub(r"(\(|\[)(.*?)(\]|\))", "", item)
+    return re.sub(r"(\(|\[)(.*?)(\]|\))", "", item).lower().replace(
+        ".mp3", "").replace(
+        "..mp3", "").replace(
+        ".webm", "").replace(
+        ".mp4", "").replace(
+        "..", ".")
 
 
 async def main():
@@ -60,7 +66,10 @@ async def main():
         except Exception:
             print(f"Results not found for song {song.name}")
             continue
-        cover_art = MP3(song.path, ID3=ID3)
+        try:
+            cover_art = MP3(song.path, ID3=ID3)
+        except HeaderNotFoundError:
+            continue
         try:
             cover_art.add_tags()
         except error:
@@ -72,13 +81,13 @@ async def main():
             mime="image/jpeg", desc=u"Cover",
             data=raw_image))
         cover_art.save()
-        os.remove(p)
+
     for song, tracks in songs.items():
         tracks: spotify.SearchResults
         try:
             track = tracks.tracks[0]
         except Exception:
-            print(f"Results not found for song {song.name}")
+            print(f"Results not found for song {cleanup_name(song.name)}")
             continue
         try:
             mutagen = EasyID3(song.path)
@@ -88,10 +97,6 @@ async def main():
         mutagen['album'] = track.album.name
         mutagen['artist'] = track.artist.name
         mutagen['genre'] = ""
-        try:
-            cover_art.add_tags()
-        except error:
-            pass
         mutagen.save()
     await client.close()
     cleanup_file_names()
@@ -103,8 +108,11 @@ def cleanup_file_names():
     for item in cleanup:
         if item.endswith(".mp3"):
             print(f"Renaming {item}, to {cleanup_name(item).strip()}")
-            os.rename(f"{FILE_PATH}\\{item}",
-                      f"{FILE_PATH}\\{cleanup_name(item).strip()}.mp3")
+            try:
+                os.rename(f"{FILE_PATH}\\{item}",
+                          f"{FILE_PATH}\\{cleanup_name(item).strip()}.mp3")
+            except FileExistsError:
+                continue
 
 
 if __name__ == "__main__":
