@@ -30,7 +30,7 @@ with os.scandir(FILE_PATH) as music_files:
 
 
 def cleanup_name(item) -> str:
-    return re.sub(r"(\(|\[)(.*?)(\]|\))", "", item).lower().replace(
+    return re.sub(r"(【|_|{|\(|\[)(.*?)(]|\)|}|_|】)", "", item).lower().replace(
         ".mp3", "").replace(
         "..mp3", "").replace(
         ".webm", "").replace(
@@ -44,8 +44,10 @@ async def main():
     entry: spotify.SearchResults
     tasks = []
     for song in music_files:
-        tasks.append(asyncio.create_task(client.search(cleanup_name(song.name),
-                                                       types=["track"])))
+        tasks.append(asyncio.create_task(client.search(
+            cleanup_name(song.name) if cleanup_name(song.name) != "" or
+            None else "Song not available", # Fixes bad request issue
+            types=["track"])))
     done = await asyncio.gather(*tasks)
     track: spotify.Track
     songs = dict(zip(music_files, done))
