@@ -1,3 +1,4 @@
 spotify
 aiohttp
 mutagen
+aiofiles
