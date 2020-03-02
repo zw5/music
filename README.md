@@ -1,5 +1,5 @@
 # Music filter
-Use this to add missing metadata to songs
+Use this to add missing metadata to songs, clean up file names, remove duplicate songs and more in just 1 script!
 #### Requires python **3.7**
 
 # Usage:
