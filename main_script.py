@@ -27,37 +27,16 @@ FILE_PATH = os.environ.get("FILE_PATH",
 # Get all files from music folder
 with os.scandir(FILE_PATH) as music_files:
     music_files: List[DirEntry] = (
-        {
-            entry for entry in music_files if entry.name.endswith('mp3')
-        }
-    )
+     {entry for entry in music_files if entry.name.endswith('mp3')})
+
+song_expressions = ['..', 'mp3', 'webm', 'lyric', 'video', 'official', 'audio',
+                    'from suicide squad', 'album', 'ft', '.'
+                    'version']
+song = re.compile(r'\b(?:%s)\b' % '|'.join(song_expressions))
 
 
-def cleanup_name(item) -> str:
-    return re.sub(r"(【|_|{|\(|\[)(.*?)(]|\)|}|_|】)", "", item).replace(
-        ".mp3", "").replace(
-        "..mp3", "").replace(
-        ".webm", "").replace(
-        ".mp4", "").replace(
-        "..", ".").replace("[audio]", "").replace(
-        "(lyric video)", "").replace(
-        "official", "").replace("video", "").replace(
-        "ep", "").replace("lyrics", "").replace(
-        "(", "").replace(")", "").replace(
-        "[", "").replace("]", "").replace(
-        "audio", "").replace(
-        "lyric", "").replace(
-        "audio", "").replace(
-        "official", "").replace(
-        "album", "").replace(
-        "version", "").replace(
-        "ft.", "").replace(
-        "_ waterparks _", "").replace(
-        "from suicide squad", "").replace(
-        "360", "").replace(
-        "virtualizer™", "").replace(
-        "music", "")
-# I'm sorry for this, i will clean up later, i promise
+def cleanup_name(i) -> str:
+    return re.sub(song, "", re.sub(r"(【|_|{|\(|\[)(.*?)(]|\)|}|_|】)", "", i))
 
 
 song_results: Dict[str, str] = {}
@@ -66,7 +45,6 @@ art_gather = []
 
 async def main():
     print(f"Preparing to work on {len(music_files)} songs...")
-    await asyncio.sleep(5)
     client = spotify.Client(SPOTIFY_CLIENT_ID, SPOTIFY_SECRET)
     song: DirEntry
     entry: spotify.SearchResults
@@ -82,14 +60,15 @@ async def main():
     except (spotify.SpotifyException, TypeError):
         print("You have been ratelimited, please wait around 20 seconds and"
               "run the script again")
+        exit()
     track: spotify.Track
     songs = dict(zip(music_files, done))
 
-    async def cover_download(url: str, song: DirEntry):
+    async def cover_download(url: str, song: DirEntry) -> None:
         async with aiohttp.ClientSession() as s:
             async with s.get(url) as r:
                 data = await r.read()
-        f, path = tempfile.mkstemp(suffix=".jpg")
+        i, path = tempfile.mkstemp(suffix=".jpg")
         async with aiofiles.open(path, 'wb') as f:
             data = await f.write(data)
         tracks: spotify.SearchResults
@@ -148,7 +127,7 @@ def c_n(name: str) -> str:  # Clean name to avoid illegal characters
      "*", "∗")
 
 
-def cleanup_file_names():
+def cleanup_file_names() -> None:
     print("Cleaning up file names...")
     cleanup = os.listdir(FILE_PATH)
     print(f"Renaming {len(cleanup)} songs...")
