@@ -4,12 +4,10 @@
 import asyncio
 import os
 import re
-import tempfile
 import time
 from os import DirEntry
 from typing import Dict, List
-
-import aiofiles
+import sys
 import aiohttp
 import spotify
 from mutagen.easyid3 import EasyID3
@@ -58,19 +56,17 @@ async def main():
     try:
         done = await asyncio.gather(*tasks)
     except (spotify.SpotifyException, TypeError):
-        print("You have been ratelimited, please wait around 20 seconds and"
-              "run the script again")
-        exit()
+        print("script has been ratelimited, waiting and "
+              "running the script again, please do not close.")
+        await asyncio.sleep(100)
+        os.execl(sys.executable, sys.executable, *sys.argv)
     track: spotify.Track
     songs = dict(zip(music_files, done))
 
     async def cover_download(url: str, song: DirEntry) -> None:
         async with aiohttp.ClientSession() as s:
             async with s.get(url) as r:
-                data = await r.read()
-        i, path = tempfile.mkstemp(suffix=".jpg")
-        async with aiofiles.open(path, 'wb') as f:
-            data = await f.write(data)
+                raw_data = await r.read()
         tracks: spotify.SearchResults
         try:
             cover_art = MP3(song.path, ID3=ID3)
@@ -80,13 +76,10 @@ async def main():
             cover_art.add_tags()
         except error:
             pass
-        async with aiofiles.open(song, "rb") as f:
-            raw_image = await f.read()
         cover_art.tags.add(APIC(
             mime="image/jpeg", desc=u"Cover",
-            data=raw_image))
+            data=raw_data))
         cover_art.save()
-        os.remove(song)
 
     sem = asyncio.Semaphore(3)
 
@@ -124,7 +117,8 @@ async def main():
 
 def c_n(name: str) -> str:  # Clean name to avoid illegal characters
     return name.replace("?", "︖").replace(
-     "*", "∗")
+     "*", "∗").replace("!", "!").replace("/",
+                                         "")
 
 
 def cleanup_file_names() -> None:
@@ -146,8 +140,24 @@ def cleanup_file_names() -> None:
                         os.remove(f"{FILE_PATH}\\{cleanup_name(item)}.mp3")
                     except Exception:
                         pass
-            except OSError:
+            except FileExistsError:
+                try:
+                    os.remove(f"{FILE_PATH}\\{song_results[item]}.mp3")
+                    os.remove(f"{FILE_PATH}\\{cleanup_name(item)}.mp3")
+                except Exception:
+                    pass
+            except FileNotFoundError:
                 continue
+            except OSError:
+                try:
+                    os.rename(f"{FILE_PATH}\\{item}",
+                              f"{FILE_PATH}\\{c_n(song_results[item])}.mp3")
+                except FileExistsError:
+                    try:
+                        os.remove(f"{FILE_PATH}\\{song_results[item]}.mp3")
+                        os.remove(f"{FILE_PATH}\\{cleanup_name(item)}.mp3")
+                    except Exception:
+                        pass
 
     print(f"Operation took {time.time() - start:.2f} seconds")
 
