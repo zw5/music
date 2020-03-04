@@ -7,7 +7,6 @@ import re
 import time
 from os import DirEntry
 from typing import Dict, List
-import sys
 import aiohttp
 import spotify
 from mutagen.easyid3 import EasyID3
@@ -21,16 +20,19 @@ SPOTIFY_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET", None)
 if SPOTIFY_SECRET is None:
     raise RuntimeError("Environment variables not set")
 FILE_PATH = os.environ.get("FILE_PATH",
-                           "C:\\Users\\ximon\\Downloads\\Music\\Starred")
+                           "C:\\Users\\ximon\\Downloads\\Music\\A")
 # Get all files from music folder
 with os.scandir(FILE_PATH) as music_files:
     music_files: List[DirEntry] = (
      {entry for entry in music_files if entry.name.endswith('mp3')})
 
-song_expressions = ['..', 'mp3', 'webm', 'lyric', 'video', 'official', 'audio',
-                    'from suicide squad', 'album', 'ft', '.'
-                    'version']
+song_expressions = ["\\.*", "mp3", "webm", "lyric", "video", "official",
+                    "audio", "from suicide squad", "album", "ft", "tradução",
+                    "subtitles", "Remastered", "lyrics", "(𝘚𝘭𝘰𝘸𝘦𝘥)",
+                    "legendado", "version"]
+
 song = re.compile(r'\b(?:%s)\b' % '|'.join(song_expressions))
+print(song)
 
 
 def cleanup_name(i) -> str:
@@ -53,13 +55,7 @@ async def main():
             cleanup_name(song.name) if cleanup_name(song.name) != "" or
             None else "Song not available",  # Fixes bad request issue
             types=["track"])))
-    try:
-        done = await asyncio.gather(*tasks)
-    except (spotify.SpotifyException, TypeError):
-        print("script has been ratelimited, waiting and "
-              "running the script again, please do not close.")
-        await asyncio.sleep(100)
-        os.execl(sys.executable, sys.executable, *sys.argv)
+    done = await asyncio.gather(*tasks)
     track: spotify.Track
     songs = dict(zip(music_files, done))
 
@@ -117,8 +113,8 @@ async def main():
 
 def c_n(name: str) -> str:  # Clean name to avoid illegal characters
     return name.replace("?", "︖").replace(
-     "*", "∗").replace("!", "!").replace("/",
-                                         "")
+     "*", "∗").replace("!", "!").replace(
+     "/", "").replace('"', "'").replace(":", "-")
 
 
 def cleanup_file_names() -> None:
