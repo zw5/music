@@ -1,5 +1,5 @@
 # Music filter
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/creator1372/music/graphs/commit-activity) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![GitHub license](https://img.shields.io/github/license/creator1372/music.svg)](https://github.com/creator1372/music/blob/master/LICENSE)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/creator1372/music/graphs/commit-activity) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![GitHub license](https://img.shields.io/github/license/creator1372/music.svg)](https://github.com/creator1372/music/blob/master/LICENSE) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com) [![GitHub version](https://badge.fury.io/gh/creator1372%2Fmusic.svg)](https://github.com/creator1372/music)
 
 Use this to add missing metadata to songs, clean up file names, remove duplicate songs and more in just 1 script!
 #### Requires python **3.7**
