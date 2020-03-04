@@ -20,7 +20,7 @@ SPOTIFY_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET", None)
 if SPOTIFY_SECRET is None:
     raise RuntimeError("Environment variables not set")
 FILE_PATH = os.environ.get("FILE_PATH",
-                           "C:\\Users\\ximon\\Downloads\\Music\\A")
+                           "C:\\Users\\user\\Downloads\\Music")
 # Get all files from music folder
 with os.scandir(FILE_PATH) as music_files:
     music_files: List[DirEntry] = (
@@ -32,7 +32,6 @@ song_expressions = ["\\.*", "mp3", "webm", "lyric", "video", "official",
                     "legendado", "version"]
 
 song = re.compile(r'\b(?:%s)\b' % '|'.join(song_expressions))
-print(song)
 
 
 def cleanup_name(i) -> str:
