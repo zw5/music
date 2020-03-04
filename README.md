@@ -1,4 +1,5 @@
 # Music filter
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://GitHub.com/creator1372/music/graphs/commit-activity) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![GitHub license](https://img.shields.io/github/license/creator1372/music.js.svg)](https://github.com/creator1372/music.js/blob/master/LICENSE) 
 Use this to add missing metadata to songs, clean up file names, remove duplicate songs and more in just 1 script!
 #### Requires python **3.7**
 
@@ -13,4 +14,4 @@ Use this to add missing metadata to songs, clean up file names, remove duplicate
 1. Set the environment variable FILE_PATH to the music folder or configure it in the script
 1. Run the script
 
-# You did it!, you just used music-filter.
+# You did it! you just used music-filter.
