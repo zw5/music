@@ -7,10 +7,12 @@ import re
 import time
 from os import DirEntry
 from typing import Dict, List
+from tqdm import tqdm
 import aiohttp
 import spotify
 from mutagen.easyid3 import EasyID3
-from mutagen.id3 import APIC, ID3, ID3NoHeaderError, error
+from mutagen.id3 import APIC, ID3, error
+from mutagen.id3._util import ID3NoHeaderError
 from mutagen.mp3 import MP3, HeaderNotFoundError
 
 start = time.time()
@@ -20,18 +22,34 @@ SPOTIFY_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET", None)
 if SPOTIFY_SECRET is None:
     raise RuntimeError("Environment variables not set")
 FILE_PATH = os.environ.get("FILE_PATH",
-                           "C:\\Users\\user\\Downloads\\Music")
+                           "C:\\Users\\ximon\\Downloads\\Music\\Starred")
 # Get all files from music folder
-with os.scandir(FILE_PATH) as music_files:
-    music_files: List[DirEntry] = (
-     {entry for entry in music_files if entry.name.endswith('mp3')})
+print("Scanning for songs...")
+number_of_songs_1 = 0
+number_of_songs_2 = 0
+with os.scandir(FILE_PATH) as _music_files:
+    music_files: List[DirEntry] = []
+    for song in _music_files:
+        if song.name.endswith("mp3"):
+            number_of_songs_1 += 1
+            try:
+                m = EasyID3(song.path)
+                m['title']
+                continue
+            except KeyError:
+                number_of_songs_2 += 1
+                music_files.append(song)
+            except ID3NoHeaderError:
+                pass
+print(f"Found {number_of_songs_1} in working directory")
+print(f"{number_of_songs_1-number_of_songs_2} files ignored, metadata present")
 
 song_expressions = ["\\.*", "mp3", "webm", "lyric", "video", "official",
                     "audio", "from suicide squad", "album", "ft", "tradução",
                     "subtitles", "Remastered", "lyrics", "(𝘚𝘭𝘰𝘸𝘦𝘥)",
                     "legendado", "version"]
 
-song = re.compile(r'\b(?:%s)\b' % '|'.join(song_expressions))
+song = re.compile(r"\b(?:%s)\b" % "|".join(song_expressions))
 
 
 def cleanup_name(i) -> str:
@@ -48,13 +66,14 @@ async def main():
     song: DirEntry
     entry: spotify.SearchResults
     tracks: Dict[DirEntry, spotify.SearchResults]
-    tasks = []
-    for song in music_files:
-        tasks.append(asyncio.create_task(client.search(
+    done = []
+    print("Searching songs on spotify's api...")
+    for song in tqdm(music_files, "Searching... ", unit="songs"):
+        done.append(await client.search(
             cleanup_name(song.name) if cleanup_name(song.name) != "" or
             None else "Song not available",  # Fixes bad request issue
-            types=["track"])))
-    done = await asyncio.gather(*tasks)
+            types=["track"]))
+
     track: spotify.Track
     songs = dict(zip(music_files, done))
 
@@ -76,18 +95,18 @@ async def main():
             data=raw_data))
         cover_art.save()
 
-    sem = asyncio.Semaphore(3)
-
-    for song, tracks in songs.items():
-        if tracks[0] is not None:
-            art_gather.append(cover_download(tracks[0].albums[0].url,
-                                             song=song))
-
-    async with sem:
-        await asyncio.gather(*art_gather)
+    print("Adding cover art to songs...")
+    for song, tracks in tqdm(songs.items(), "Searching... ", unit="songs"):
+        try:
+            mutagen = EasyID3(song.path)
+        except ID3NoHeaderError:
+            continue
+        if tracks[0] is not None and mutagen["title"] != "":
+            await cover_download(tracks[0].albums[0].url, song=song)
 
     songs_not_found = 0
-    for song, tracks in songs.items():
+    print("Adding metadata to songs...")
+    for song, tracks in tqdm(songs.items(), "Searching... ", unit="songs"):
         tracks: spotify.SearchResults
         try:
             track = tracks.tracks[0]
@@ -98,10 +117,11 @@ async def main():
             mutagen = EasyID3(song.path)
         except ID3NoHeaderError:
             continue
-        mutagen['title'] = track.name
-        mutagen['album'] = track.album.name
-        mutagen['artist'] = track.artist.name
-        mutagen['genre'] = ""
+        print(mutagen["title"])
+        mutagen["title"] = track.name
+        mutagen["album"] = track.album.name
+        mutagen["artist"] = track.artist.name
+        mutagen["genre"] = ""
         mutagen.save()
         song_results[song.name] = track.name
     if songs_not_found != 0:
@@ -113,14 +133,14 @@ async def main():
 def c_n(name: str) -> str:  # Clean name to avoid illegal characters
     return name.replace("?", "︖").replace(
      "*", "∗").replace("!", "!").replace(
-     "/", "").replace('"', "'").replace(":", "-")
+     "/", "").replace(""", """).replace(":", "-")
 
 
 def cleanup_file_names() -> None:
     print("Cleaning up file names...")
     cleanup = os.listdir(FILE_PATH)
     print(f"Renaming {len(cleanup)} songs...")
-    for item in cleanup:
+    for item in tqdm(cleanup, "Searching... ", unit="songs"):
         if item.endswith(".mp3"):
             try:
                 os.rename(f"{FILE_PATH}\\{item}",
